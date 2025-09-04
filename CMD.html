@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Command Prompt</title>
+  <style>
+    body {
+      background: black;
+      color: lime;
+      font-family: monospace;
+      padding: 20px;
+    }
+    #console {
+      width: 100%;
+      height: 400px;
+      overflow-y: auto;
+      border: 1px solid lime;
+      padding: 10px;
+      background: black;
+      white-space: pre-wrap;
+    }
+    #input {
+      width: 100%;
+      padding: 10px;
+      background: black;
+      color: lime;
+      border: 1px solid lime;
+      font-family: monospace;
+    }
+    .broken { color: red; }
+    .loading { color: yellow; }
+    .tutorial { color: cyan; margin-top: 5px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h2>COMMAND PROMPT</h2>
+  <div id="console">Booting Command Prompt...<br>Type 'help' for commands.<br></div>
+  <input type="text" id="input" placeholder="Enter command here..." autofocus>
+
+  <script>
+    const consoleDiv = document.getElementById('console');
+    const input = document.getElementById('input');
+
+    function printLine(text, cls) {
+      if (cls) {
+        consoleDiv.innerHTML += `<span class="${cls}">${text}</span><br>`;
+      } else {
+        consoleDiv.innerHTML += text + "<br>";
+      }
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+
+    let notificationPermissionAsked = false;
+
+    // Tutorials storage (preloaded)
+    const tutorials = [
+      `Tutorial: Chrome Settings & Notifications
+-----------------------------------------
+1. Local HTML files (file://) are treated as "insecure" by Chrome.
+2. Notification permissions for file:// cannot be saved permanently.
+3. To view notification settings in Chrome:
+   - Open Chrome.
+   - Go to: chrome://settings/content/notifications
+   - Local files usually do not appear here, so permissions cannot be changed.
+4. To reliably allow notifications:
+   - Serve HTML via local server (http://localhost:8000)
+   - Or use online editor like CodePen/JSFiddle/repl.it (HTTPS)
+5. If notifications are blocked, the console shows fallback messages.`
+    ];
+
+    input.addEventListener('keydown', async function(e) {
+      if (e.key === "Enter") {
+        const command = input.value.trim();
+        printLine("> " + command);
+        input.value = "";
+
+        if (command.toLowerCase() === "help") {
+          printLine("Commands (broken): connect, scan, playrah, clear");
+          printLine("New commands: notify <message>, tuts");
+          return;
+        }
+
+        // Broken commands
+        if (["connect","scan","playrah","clear"].includes(command.toLowerCase())) {
+          printLine("This command is currently broken.", "broken");
+          return;
+        }
+
+        // Show tutorials
+        if (command.toLowerCase() === "tuts") {
+          if (tutorials.length === 0) {
+            printLine("No tutorials available yet.", "broken");
+          } else {
+            tutorials.forEach((tut, idx) => {
+              printLine(`${idx + 1}. ${tut}`, "tutorial");
+            });
+          }
+          return;
+        }
+
+        // Notify command with message (real notifications only)
+        if (command.toLowerCase().startsWith("notify ")) {
+          const msg = command.slice(7).trim();
+          if (!msg) {
+            printLine("Please provide a message. Usage: notify YourMessageHere", "broken");
+            return;
+          }
+
+          if ("Notification" in window) {
+            if (Notification.permission === "granted") {
+              new Notification("Command Prompt", { body: msg });
+            } else if (Notification.permission !== "denied" && !notificationPermissionAsked) {
+              notificationPermissionAsked = true;
+              Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                  new Notification("Command Prompt", { body: msg });
+                } else {
+                  printLine("Notification permission denied.", "broken");
+                }
+              });
+            } else {
+              printLine("Notifications are blocked.", "broken");
+            }
+          } else {
+            printLine("Notifications not supported by this browser.", "broken");
+          }
+          return;
+        }
+
+        // Unknown command
+        printLine("Unknown command. Type 'help' for commands.", "broken");
+      }
+    });
+  </script>
+</body>
+</html>
